@@ -1,7 +1,7 @@
 import logging
 
-from fastapi import APIRouter, HTTPException
-from app.scrapers import AokeScraper
+from fastapi import APIRouter
+from app.scrapers.sporttery import SportteryScraper
 from app.scrapers.mock import get_mock_matches
 from app.database import cache_matches, get_cached_matches
 
@@ -12,9 +12,8 @@ router = APIRouter()
 @router.get("/")
 async def get_matches(refresh: bool = False) -> dict:
     """Get today's matches with odds.
-    
-    Args:
-        refresh: Force refresh from source (ignore cache)
+
+    Tries sporttery.cn first, falls back to mock data.
     """
     # Try cache first
     if not refresh:
@@ -25,29 +24,29 @@ async def get_matches(refresh: bool = False) -> dict:
                 "source": "cache",
                 "count": len(cached),
             }
-    
-    # Fetch fresh data
+
+    # Try official site
     try:
-        scraper = AokeScraper()
+        scraper = SportteryScraper()
         matches = await scraper.fetch_matches()
-        
-        # Cache results
-        await cache_matches(matches)
-        
-        return {
-            "matches": [m.model_dump() for m in matches],
-            "source": "live",
-            "count": len(matches),
-        }
+        if matches:
+            await cache_matches(matches)
+            return {
+                "matches": [m.model_dump() for m in matches],
+                "source": "sporttery",
+                "count": len(matches),
+            }
     except Exception as e:
-        logger.warning(f"Scraper failed, using mock data: {e}")
-        matches = get_mock_matches()
-        await cache_matches(matches)
-        return {
-            "matches": [m.model_dump() for m in matches],
-            "source": "mock",
-            "count": len(matches),
-        }
+        logger.warning(f"Sporttery scraper failed: {e}")
+
+    # Fallback to mock data
+    matches = get_mock_matches()
+    await cache_matches(matches)
+    return {
+        "matches": [m.model_dump() for m in matches],
+        "source": "mock",
+        "count": len(matches),
+    }
 
 
 @router.get("/{match_id}")
@@ -57,4 +56,5 @@ async def get_match(match_id: str) -> dict:
     for match in cached:
         if match.id == match_id:
             return match.model_dump()
+    from fastapi import HTTPException
     raise HTTPException(status_code=404, detail="Match not found")
