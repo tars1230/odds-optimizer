@@ -4,5 +4,5 @@ router = APIRouter()
 
 
 @router.post("/")
-async def optimize_budget():
+async def optimize_budget() -> dict:
     return {"recommendations": [], "message": "Not implemented yet"}

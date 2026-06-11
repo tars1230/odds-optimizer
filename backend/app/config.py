@@ -11,10 +11,5 @@ class Settings:
     # Budget presets (RMB)
     BUDGET_PRESETS: list[int] = [100, 200, 500, 1000, 2000, 5000]
 
-    # Risk levels
-    RISK_CONSERVATIVE: str = "conservative"
-    RISK_MODERATE: str = "moderate"
-    RISK_AGGRESSIVE: str = "aggressive"
-
 
 settings = Settings()
