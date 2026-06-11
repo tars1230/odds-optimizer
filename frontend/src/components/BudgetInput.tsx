@@ -5,11 +5,10 @@ interface BudgetInputProps {
   loading: boolean;
 }
 
-const PRESETS = [100, 200, 500, 1000, 2000];
 const RISK_LEVELS = [
-  { value: 'conservative', label: '保守', desc: '四分之一凯利' },
-  { value: 'moderate', label: '适中', desc: '半凯利' },
-  { value: 'aggressive', label: '激进', desc: '四分之三凯利' },
+  { value: 'conservative', label: '保守', desc: '分散投注' },
+  { value: 'moderate', label: '适中', desc: '均衡分配' },
+  { value: 'aggressive', label: '激进', desc: '集中押注' },
 ];
 
 export function BudgetInput({ onOptimize, loading }: BudgetInputProps) {
@@ -19,42 +18,35 @@ export function BudgetInput({ onOptimize, loading }: BudgetInputProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold mb-4">预算设置</h2>
-      
-      <div className="mb-4">
-        <label className="block text-sm text-gray-600 mb-2">投注金额 (元)</label>
-        <div className="flex gap-2 mb-2">
-          {PRESETS.map((preset) => (
-            <button
-              key={preset}
-              onClick={() => setBudget(preset)}
-              className={`px-3 py-1 rounded text-sm ${
-                budget === preset
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {preset}
-            </button>
-          ))}
+
+      <div className="mb-5">
+        <div className="flex justify-between items-baseline mb-2">
+          <label className="text-sm text-gray-600">投注金额</label>
+          <span className="text-2xl font-bold text-blue-600">¥{budget}</span>
         </div>
         <input
-          type="number"
+          type="range"
+          min={100}
+          max={10000}
+          step={100}
           value={budget}
           onChange={(e) => setBudget(Number(e.target.value))}
-          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          min={1}
-          max={100000}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
         />
+        <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <span>¥100</span>
+          <span>¥10,000</span>
+        </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-5">
         <label className="block text-sm text-gray-600 mb-2">风险偏好</label>
         <div className="grid grid-cols-3 gap-2">
           {RISK_LEVELS.map((level) => (
             <button
               key={level.value}
               onClick={() => setRiskLevel(level.value)}
-              className={`p-3 rounded-lg text-center ${
+              className={`p-3 rounded-lg text-center transition-colors ${
                 riskLevel === level.value
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -70,7 +62,7 @@ export function BudgetInput({ onOptimize, loading }: BudgetInputProps) {
       <button
         onClick={() => onOptimize(budget, riskLevel)}
         disabled={loading}
-        className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? '计算中...' : '生成最优方案'}
       </button>
