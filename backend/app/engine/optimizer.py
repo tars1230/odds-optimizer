@@ -9,6 +9,15 @@ def implied_probability(odds: float) -> float:
     return 1.0 / odds
 
 
+# Risk profiles: (max_bets, min_odds, power)
+# power controls how concentrated the allocation is
+RISK_PROFILES = {
+    "conservative": (10, 1.8, 0.3),   # More bets, higher min odds, very even spread
+    "moderate":     (6,  1.5, 1.0),   # Balanced
+    "aggressive":   (3,  2.5, 3.0),   # Few bets, high odds only, very concentrated
+}
+
+
 def optimize_budget(
     matches: list[Match],
     budget: float,
@@ -19,47 +28,30 @@ def optimize_budget(
 ) -> list[BetRecommendation]:
     """
     Generate optimal betting plan — full budget deployment.
-    
-    Strategy:
-    1. Score each selection by EV * log(odds) — prioritizes high-odds value
-    2. Rank and pick top N
-    3. Allocate full budget weighted by score (higher score = more money)
-    
-    Args:
-        matches: Available matches with odds
-        budget: Total budget in RMB (fully deployed)
-        risk_level: "conservative", "moderate", or "aggressive"
-        max_matches: Maximum number of bets
-        min_odds: Minimum odds threshold
-        max_odds: Maximum odds threshold
-    
-    Returns:
-        List of betting recommendations totaling ~budget
+
+    Risk levels have meaningfully different strategies:
+    - conservative: 10 bets, spread evenly, lower odds, safer
+    - moderate: 6 bets, weighted by score, balanced
+    - aggressive: 3 bets, concentrate on top high-odds picks, maximum upside
     """
     if not matches:
         return []
 
-    # Risk multipliers control concentration
-    # conservative = spread evenly, aggressive = concentrate on top picks
-    concentration = {
-        "conservative": 0.6,   # More even spread
-        "moderate": 1.0,       # Standard weighted
-        "aggressive": 1.5,     # Concentrate on top picks
-    }
-    power = concentration.get(risk_level, 1.0)
+    profile = RISK_PROFILES.get(risk_level, RISK_PROFILES["moderate"])
+    num_bets, profile_min_odds, power = profile
+    effective_min_odds = max(min_odds, profile_min_odds)
 
     candidates = []
 
     for match in matches:
         for selection, odds in match.odds.items():
-            if odds < min_odds or odds > max_odds:
+            if odds < effective_min_odds or odds > max_odds:
                 continue
 
             implied = implied_probability(odds)
-            # EV score: positive means our estimated edge
             score = ev_score(implied, odds)
             if score <= 0:
-                continue  # skip invalid odds
+                continue
 
             candidates.append({
                 "match": match,
@@ -72,13 +64,9 @@ def optimize_budget(
     if not candidates:
         return []
 
-    # Sort by score (highest = best risk-reward)
     candidates.sort(key=lambda x: x["score"], reverse=True)
+    top = candidates[:num_bets]
 
-    # Take top N
-    top = candidates[:max_matches]
-
-    # Weighted allocation: score^power gives more weight to top picks
     total_weight = sum(c["score"] ** power for c in top)
     if total_weight <= 0:
         return []
@@ -87,11 +75,9 @@ def optimize_budget(
     allocated = 0.0
 
     for i, candidate in enumerate(top):
-        # Calculate proportional stake
         weight = candidate["score"] ** power
         stake = (weight / total_weight) * budget
 
-        # Last bet gets remainder to avoid rounding gaps
         if i == len(top) - 1:
             stake = budget - allocated
 

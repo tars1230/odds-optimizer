@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MatchList } from './components/MatchList';
 import { BudgetInput } from './components/BudgetInput';
 import { PlanCard } from './components/PlanCard';
@@ -13,6 +13,7 @@ function App() {
   const [totalStake, setTotalStake] = useState(0);
   const [maxReturn, setMaxReturn] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadMatches();
@@ -41,11 +42,21 @@ function App() {
       setTotalStake(result.total_stake);
       setMaxReturn(result.max_potential_return);
     } catch (err) {
-      setError('加载失败，请重试');
+      setError('计算失败，请重试');
       console.error('Optimization failed:', err);
     } finally {
       setOptimizing(false);
     }
+  }
+
+  // Debounced handler for slider - triggers 300ms after user stops dragging
+  function handleBudgetChange(budget: number, riskLevel: string) {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = window.setTimeout(() => {
+      handleOptimize(budget, riskLevel);
+    }, 300);
   }
 
   return (
@@ -56,7 +67,7 @@ function App() {
             竞彩赔率优化器
           </h1>
           <p className="text-sm text-gray-500">
-            基于凯利准则的最优盈亏比投注方案
+            基于凯利准则的最优盈亏比投注方案 · 数据来源：竞彩官网
           </p>
         </div>
       </header>
@@ -81,7 +92,11 @@ function App() {
 
           {/* Right: Budget & Plan */}
           <div className="space-y-6">
-            <BudgetInput onOptimize={handleOptimize} loading={optimizing} />
+            <BudgetInput
+              onOptimize={handleOptimize}
+              onChange={handleBudgetChange}
+              loading={optimizing}
+            />
             <PlanCard
               recommendations={recommendations}
               totalStake={totalStake}
