@@ -28,7 +28,7 @@ export function PlanCard({ recommendations, totalStake, maxReturn }: PlanCardPro
         </div>
         <div className="bg-purple-50 rounded-lg p-3">
           <div className="text-2xl font-bold text-purple-600">
-            {((maxReturn / totalStake - 1) * 100).toFixed(0)}%
+            {totalStake > 0 ? ((maxReturn / totalStake - 1) * 100).toFixed(0) : '0'}%
           </div>
           <div className="text-xs text-gray-500">潜在收益率</div>
         </div>

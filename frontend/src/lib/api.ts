@@ -35,6 +35,7 @@ export interface OptimizeResponse {
 
 export async function fetchMatches(refresh = false): Promise<Match[]> {
   const res = await fetch(`${API_BASE}/matches/?refresh=${refresh}`);
+  if (!res.ok) throw new Error(`Failed to fetch matches: ${res.status}`);
   const data = await res.json();
   return data.matches || [];
 }
@@ -53,5 +54,6 @@ export async function optimizeBudget(
       max_matches: maxMatches,
     }),
   });
+  if (!res.ok) throw new Error(`Optimization failed: ${res.status}`);
   return res.json();
 }

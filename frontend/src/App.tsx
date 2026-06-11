@@ -12,6 +12,7 @@ function App() {
   const [optimizing, setOptimizing] = useState(false);
   const [totalStake, setTotalStake] = useState(0);
   const [maxReturn, setMaxReturn] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadMatches();
@@ -19,10 +20,12 @@ function App() {
 
   async function loadMatches(refresh = false) {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchMatches(refresh);
       setMatches(data);
     } catch (err) {
+      setError('加载失败，请重试');
       console.error('Failed to load matches:', err);
     } finally {
       setLoading(false);
@@ -31,12 +34,14 @@ function App() {
 
   async function handleOptimize(budget: number, riskLevel: string) {
     setOptimizing(true);
+    setError(null);
     try {
       const result = await optimizeBudget(budget, riskLevel);
       setRecommendations(result.recommendations);
       setTotalStake(result.total_stake);
       setMaxReturn(result.max_potential_return);
     } catch (err) {
+      setError('加载失败，请重试');
       console.error('Optimization failed:', err);
     } finally {
       setOptimizing(false);
@@ -70,6 +75,7 @@ function App() {
                 {loading ? '加载中...' : '刷新数据'}
               </button>
             </div>
+            {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
             <MatchList matches={matches} loading={loading} />
           </div>
 
