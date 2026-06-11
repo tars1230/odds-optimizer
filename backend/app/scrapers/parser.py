@@ -43,6 +43,9 @@ def parse_match_row(html: str) -> dict | None:
         home_odds = float(cells[4].get_text(strip=True))
         draw_odds = float(cells[5].get_text(strip=True))
         away_odds = float(cells[6].get_text(strip=True))
+
+        if home_odds <= 0 or draw_odds <= 0 or away_odds <= 0:
+            return None
         
         # Parse time (try common formats)
         match_time = _parse_time(match_time_str)
@@ -77,5 +80,4 @@ def _parse_time(time_str: str) -> datetime:
         except ValueError:
             continue
     
-    # Default to now if parsing fails
-    return datetime.now()
+    raise ValueError(f"Could not parse time string: {time_str}")

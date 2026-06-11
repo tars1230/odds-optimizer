@@ -1,6 +1,5 @@
 """澳客网 odds scraper."""
 
-import asyncio
 from datetime import datetime
 from playwright.async_api import async_playwright
 
@@ -34,7 +33,7 @@ class AokeScraper(BaseScraper):
                 matches = []
                 for raw in raw_matches:
                     match = Match(
-                        id=f"aoke_{hash(raw['home_team'] + raw['away_team'])}",
+                        id=f"aoke_{raw['home_team']}_{raw['away_team']}_{raw['match_time'].strftime('%Y%m%d')}",
                         league=raw["league"],
                         home_team=raw["home_team"],
                         away_team=raw["away_team"],
