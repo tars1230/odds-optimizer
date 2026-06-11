@@ -27,7 +27,6 @@ function App() {
       setMatches(data);
     } catch (err) {
       setError('加载失败，请重试');
-      console.error('Failed to load matches:', err);
     } finally {
       setLoading(false);
     }
@@ -42,56 +41,74 @@ function App() {
       setTotalStake(result.total_stake);
       setMaxReturn(result.max_potential_return);
     } catch (err) {
-      setError('计算失败，请重试');
-      console.error('Optimization failed:', err);
+      setError('计算失败');
     } finally {
       setOptimizing(false);
     }
   }
 
-  // Debounced handler for slider - triggers 300ms after user stops dragging
   function handleBudgetChange(budget: number, riskLevel: string) {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
       handleOptimize(budget, riskLevel);
-    }, 300);
+    }, 400);
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            竞彩赔率优化器
-          </h1>
-          <p className="text-sm text-gray-500">
-            基于凯利准则的最优盈亏比投注方案 · 数据来源：竞彩官网
-          </p>
-        </div>
-      </header>
+    <div className="min-h-dvh relative overflow-hidden">
+      {/* Background gradient orbs */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/8 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-purple-500/6 blur-[100px]" />
+      </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Header */}
+        <header className="mb-10 sm:mb-14 animate-fade-up">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs font-medium text-[var(--text-secondary)] tracking-widest uppercase">Live Data</span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-2">
+            竞彩赔率<span className="text-indigo-400">优化器</span>
+          </h1>
+          <p className="text-[var(--text-secondary)] text-sm sm:text-base max-w-lg">
+            基于数学模型的投注方案生成 · 数据来源竞彩官网 · 实时更新
+          </p>
+        </header>
+
+        {/* Main grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           {/* Left: Matches */}
-          <div className="lg:col-span-2">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">今日赛事</h2>
+          <div className="lg:col-span-7 xl:col-span-8">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold">今日赛事</h2>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 font-medium">
+                  {matches.length} 场
+                </span>
+              </div>
               <button
                 onClick={() => loadMatches(true)}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                className="group flex items-center gap-2 px-4 py-2 rounded-full glass text-sm font-medium hover:bg-white/5 transition-all duration-300 active:scale-[0.97]"
               >
-                {loading ? '加载中...' : '刷新数据'}
+                <svg className={`w-4 h-4 transition-transform duration-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 11-6.219-8.56" />
+                </svg>
+                {loading ? '加载中' : '刷新'}
               </button>
             </div>
-            {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
+            {error && (
+              <div className="mb-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm animate-fade-up">
+                {error}
+              </div>
+            )}
             <MatchList matches={matches} loading={loading} />
           </div>
 
-          {/* Right: Budget & Plan */}
-          <div className="space-y-6">
+          {/* Right: Controls & Plan */}
+          <div className="lg:col-span-5 xl:col-span-4 space-y-6">
             <BudgetInput
               onOptimize={handleOptimize}
               onChange={handleBudgetChange}
@@ -104,7 +121,14 @@ function App() {
             />
           </div>
         </div>
-      </main>
+
+        {/* Footer */}
+        <footer className="mt-16 pt-8 border-t border-white/5 text-center">
+          <p className="text-xs text-[var(--text-secondary)]">
+            仅供参考，不构成投注建议 · 彩票有风险，投注需谨慎
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

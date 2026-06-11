@@ -9,71 +9,73 @@ interface PlanCardProps {
 export function PlanCard({ recommendations, totalStake, maxReturn }: PlanCardProps) {
   if (recommendations.length === 0) return null;
 
-  const potentialProfit = maxReturn - totalStake;
+  const profit = maxReturn - totalStake;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold mb-4">最优投注方案</h2>
-      
-      <div className="grid grid-cols-3 gap-4 mb-6 text-center">
-        <div className="bg-green-50 rounded-lg p-3">
-          <div className="text-2xl font-bold text-green-600">
+    <div className="glass-strong rounded-3xl p-6 animate-fade-up">
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="text-center p-3 rounded-2xl bg-white/[0.02]">
+          <div className="text-2xl font-extrabold text-[var(--text-primary)] tabular-nums">
             ¥{totalStake.toFixed(0)}
           </div>
-          <div className="text-xs text-gray-500">总投注</div>
+          <div className="text-[10px] text-[var(--text-secondary)] mt-1">总投注</div>
         </div>
-        <div className="bg-blue-50 rounded-lg p-3">
-          <div className="text-2xl font-bold text-blue-600">
+        <div className="text-center p-3 rounded-2xl bg-indigo-500/5">
+          <div className="text-2xl font-extrabold text-indigo-400 tabular-nums">
             ¥{maxReturn.toFixed(0)}
           </div>
-          <div className="text-xs text-gray-500">全中最高回报</div>
+          <div className="text-[10px] text-[var(--text-secondary)] mt-1">全中回报</div>
         </div>
-        <div className="bg-amber-50 rounded-lg p-3">
-          <div className="text-2xl font-bold text-amber-600">
-            +¥{potentialProfit.toFixed(0)}
+        <div className="text-center p-3 rounded-2xl bg-green-500/5">
+          <div className="text-2xl font-extrabold text-green-400 tabular-nums">
+            +¥{profit.toFixed(0)}
           </div>
-          <div className="text-xs text-gray-500">潜在利润</div>
+          <div className="text-[10px] text-[var(--text-secondary)] mt-1">潜在利润</div>
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* Bet list */}
+      <div className="space-y-2">
         {recommendations.map((rec, index) => (
           <div
             key={`${rec.match_id}-${rec.selection}`}
-            className="border rounded-lg p-4 hover:border-blue-300 transition-colors"
+            className="glass rounded-2xl p-4 hover:bg-white/[0.04] transition-all duration-300 group"
           >
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                  {index + 1}
-                </span>
-                <span className="font-medium">{rec.match_summary}</span>
+            <div className="flex items-center gap-3">
+              {/* Rank badge */}
+              <div className="w-7 h-7 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-indigo-400">{index + 1}</span>
               </div>
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                {rec.selection === 'home' ? '主胜' : rec.selection === 'draw' ? '平' : '客胜'}
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-4 gap-2 text-sm">
-              <div>
-                <div className="text-gray-500">赔率</div>
-                <div className="font-mono font-bold text-blue-600">{rec.odds.toFixed(2)}</div>
+
+              {/* Match info */}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold truncate">{rec.match_summary}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-[var(--text-secondary)]">
+                    {rec.selection === 'home' ? '主胜' : rec.selection === 'draw' ? '平' : '客胜'}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-secondary)]">
+                    赔率 {rec.odds.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <div>
-                <div className="text-gray-500">投注</div>
-                <div className="font-mono">¥{rec.stake.toFixed(0)}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">潜在回报</div>
-                <div className="font-mono text-green-600">¥{rec.potential_return.toFixed(0)}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">EV评分</div>
-                <div className="font-mono">{rec.ev_score.toFixed(2)}</div>
+
+              {/* Amount */}
+              <div className="text-right shrink-0">
+                <div className="text-sm font-bold tabular-nums">¥{rec.stake.toFixed(0)}</div>
+                <div className="text-[10px] text-green-400 tabular-nums">→ ¥{rec.potential_return.toFixed(0)}</div>
               </div>
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Disclaimer */}
+      <div className="mt-4 pt-4 border-t border-white/5 text-center">
+        <p className="text-[10px] text-[var(--text-secondary)]">
+          方案基于赔率排序，仅供参考
+        </p>
       </div>
     </div>
   );
