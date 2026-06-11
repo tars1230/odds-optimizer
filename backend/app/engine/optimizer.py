@@ -61,6 +61,9 @@ def optimize_budget(
     Returns:
         List of betting recommendations
     """
+    if risk_level not in RISK_FRACTIONS:
+        raise ValueError(f"Invalid risk_level: {risk_level}. Must be one of: {list(RISK_FRACTIONS.keys())}")
+
     if not matches:
         return []
     
@@ -109,7 +112,7 @@ def optimize_budget(
             break
         
         # Calculate stake
-        optimal_stake = budget * candidate["kelly_fraction"] * fraction
+        optimal_stake = remaining_budget * candidate["kelly_fraction"] * fraction
         stake = min(optimal_stake, remaining_budget)
         
         if stake < 1.0:  # Minimum bet

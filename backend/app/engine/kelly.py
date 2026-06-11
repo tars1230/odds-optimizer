@@ -44,5 +44,7 @@ def fractional_kelly(win_prob: float, odds: float, fraction: float = 0.5) -> flo
     Returns:
         Reduced Kelly fraction
     """
+    if fraction <= 0 or fraction > 1:
+        raise ValueError(f"Fraction must be in (0, 1], got {fraction}")
     full_kelly = kelly_criterion(win_prob, odds)
     return full_kelly * fraction
