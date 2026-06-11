@@ -1,5 +1,6 @@
 """SQLite database for caching odds data."""
 
+import json
 import aiosqlite
 from datetime import datetime, timedelta
 from app.config import settings
@@ -11,6 +12,7 @@ async def init_db():
     settings.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     
     async with aiosqlite.connect(settings.DB_PATH) as db:
+        await db.execute("PRAGMA foreign_keys = ON")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS matches (
                 id TEXT PRIMARY KEY,
@@ -36,6 +38,7 @@ async def init_db():
                 FOREIGN KEY (match_id) REFERENCES matches(id)
             )
         """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_matches_scraped_at ON matches(scraped_at)")
         await db.commit()
 
 
@@ -53,7 +56,7 @@ async def cache_matches(matches: list[Match]):
                     match.home_team,
                     match.away_team,
                     match.match_time.isoformat(),
-                    str(match.odds),
+                    json.dumps(match.odds),
                     match.bet_type.value,
                     match.source,
                     match.scraped_at.isoformat(),
@@ -79,7 +82,7 @@ async def get_cached_matches(max_age_seconds: int = None) -> list[Match]:
         
         matches = []
         for row in rows:
-            odds = eval(row["odds"])  # Convert string back to dict
+            odds = json.loads(row["odds"])  # Convert JSON string back to dict
             matches.append(Match(
                 id=row["id"],
                 league=row["league"],
