@@ -1,12 +1,24 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import history, matches, optimize
+from app.api import matches, optimize, history
+from app.database import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    await init_db()
+    yield
+    # Shutdown
+
 
 app = FastAPI(
     title="Odds Optimizer",
     description="竞彩赔率优化器 - 最优盈亏比投注方案",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
