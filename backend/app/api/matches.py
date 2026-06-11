@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter
 from app.scrapers.sporttery import SportteryScraper
@@ -10,19 +11,24 @@ router = APIRouter()
 
 
 @router.get("/")
-async def get_matches(refresh: bool = False) -> dict:
+async def get_matches(refresh: bool = False, include_expired: bool = False) -> dict:
     """Get today's matches with odds.
 
-    Tries sporttery.cn first, falls back to mock data.
+    By default only returns future (betttable) matches.
+    Set include_expired=true to see all matches.
     """
     # Try cache first
     if not refresh:
         cached = await get_cached_matches()
         if cached:
+            matches = cached
+            if not include_expired:
+                now = datetime.now()
+                matches = [m for m in matches if m.match_time > now]
             return {
-                "matches": [m.model_dump() for m in cached],
+                "matches": [m.model_dump() for m in matches],
                 "source": "cache",
-                "count": len(cached),
+                "count": len(matches),
             }
 
     # Try official site
@@ -31,10 +37,14 @@ async def get_matches(refresh: bool = False) -> dict:
         matches = await scraper.fetch_matches()
         if matches:
             await cache_matches(matches)
+            display = matches
+            if not include_expired:
+                now = datetime.now()
+                display = [m for m in matches if m.match_time > now]
             return {
-                "matches": [m.model_dump() for m in matches],
+                "matches": [m.model_dump() for m in display],
                 "source": "sporttery",
-                "count": len(matches),
+                "count": len(display),
             }
     except Exception as e:
         logger.warning(f"Sporttery scraper failed: {e}")

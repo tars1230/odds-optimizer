@@ -22,7 +22,9 @@ class SportteryScraper(BaseScraper):
 
             try:
                 await page.goto(self.URL, timeout=settings.SCRAPER_TIMEOUT * 1000)
-                await page.wait_for_load_state("networkidle")
+                await page.wait_for_load_state("domcontentloaded")
+                # Wait for table to render
+                await page.wait_for_selector("table", timeout=10000)
                 return await self._parse_table(page)
             finally:
                 await browser.close()
