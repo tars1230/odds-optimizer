@@ -1,8 +1,50 @@
 from fastapi import APIRouter
+from app.models import OptimizeRequest, OptimizeResponse
+from app.engine.optimizer import optimize_budget
+from app.database import get_cached_matches
 
 router = APIRouter()
 
 
-@router.post("/")
-async def optimize_budget() -> dict:
-    return {"recommendations": [], "message": "Not implemented yet"}
+@router.post("/", response_model=OptimizeResponse)
+async def optimize_budget_endpoint(request: OptimizeRequest) -> OptimizeResponse:
+    """Generate optimal betting plan for given budget."""
+    # Get available matches
+    matches = await get_cached_matches()
+    
+    if not matches:
+        return OptimizeResponse(
+            budget=request.budget,
+            risk_level=request.risk_level,
+            recommendations=[],
+            total_stake=0,
+            max_potential_return=0,
+            average_ev=0,
+        )
+    
+    # Filter by bet types if specified
+    if request.bet_types:
+        matches = [m for m in matches if m.bet_type in request.bet_types]
+    
+    # Run optimizer
+    recommendations = optimize_budget(
+        matches=matches,
+        budget=request.budget,
+        risk_level=request.risk_level.value,
+        max_matches=request.max_matches,
+        min_odds=request.min_odds,
+        max_odds=request.max_odds,
+    )
+    
+    total_stake = sum(r.stake for r in recommendations)
+    max_return = sum(r.potential_return for r in recommendations)
+    avg_ev = sum(r.ev_score for r in recommendations) / len(recommendations) if recommendations else 0
+    
+    return OptimizeResponse(
+        budget=request.budget,
+        risk_level=request.risk_level,
+        recommendations=recommendations,
+        total_stake=round(total_stake, 2),
+        max_potential_return=round(max_return, 2),
+        average_ev=round(avg_ev, 4),
+    )
