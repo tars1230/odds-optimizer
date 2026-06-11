@@ -23,25 +23,22 @@ def expected_value(win_prob: float, odds: float, stake: float = 1.0) -> float:
 
 def ev_score(win_prob: float, odds: float) -> float:
     """
-    Calculate EV-based score for ranking bets.
+    Score for ranking bets by risk-reward potential.
     
-    Combines expected value with odds magnitude to favor
-    higher-odds bets with positive EV (your core requirement).
+    Uses implied probability from odds (no edge assumption).
+    Higher odds get exponentially more weight (log scaling).
     
-    Score = EV * log(odds)
+    Score = log(odds) * odds
     
-    This prioritizes bets that are:
-    1. Positive EV (mathematically profitable)
-    2. Higher odds (more upside potential)
+    This favors high-odds selections for maximum upside.
     
     Args:
-        win_prob: Probability of winning
+        win_prob: Probability of winning (used for context, not in formula)
         odds: Decimal odds
     
     Returns:
         Score for ranking (higher = better)
     """
-    ev = win_prob * odds - 1.0  # EV per unit
-    if ev <= 0:
-        return -1.0  # Penalize negative EV bets
-    return ev * math.log(odds)
+    if odds <= 1.0:
+        return 0.0
+    return math.log(odds) * odds

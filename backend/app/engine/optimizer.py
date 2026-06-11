@@ -1,32 +1,12 @@
-"""Budget optimization algorithm using Kelly Criterion."""
+"""Budget optimization algorithm — full deployment mode."""
 
 from app.models import Match, BetRecommendation, BetType
-from app.engine.kelly import kelly_criterion
 from app.engine.ev import ev_score
-
-
-# Risk multipliers for fractional Kelly
-RISK_FRACTIONS = {
-    "conservative": 0.25,  # Quarter Kelly
-    "moderate": 0.5,       # Half Kelly
-    "aggressive": 0.75,    # Three-quarter Kelly
-}
 
 
 def implied_probability(odds: float) -> float:
     """Convert decimal odds to implied probability."""
     return 1.0 / odds
-
-
-def estimate_true_probability(odds: float, margin: float = 0.05) -> float:
-    """
-    Estimate true probability from odds.
-    
-    Bookmakers add margin (~5% typically).
-    We estimate true prob = implied_prob * (1 - margin).
-    """
-    implied = implied_probability(odds)
-    return implied * (1 - margin)
 
 
 def optimize_budget(
@@ -36,103 +16,104 @@ def optimize_budget(
     max_matches: int = 5,
     min_odds: float = 1.5,
     max_odds: float = 20.0,
-    margin: float = 0.05,
-    true_probs: dict[str, float] | None = None,
 ) -> list[BetRecommendation]:
     """
-    Generate optimal betting plan for given budget.
+    Generate optimal betting plan — full budget deployment.
     
-    Algorithm:
-    1. Score each possible bet by EV * log(odds)
-    2. Rank by score (highest first)
-    3. Allocate budget using Kelly fractions
-    4. Apply risk adjustment
+    Strategy:
+    1. Score each selection by EV * log(odds) — prioritizes high-odds value
+    2. Rank and pick top N
+    3. Allocate full budget weighted by score (higher score = more money)
     
     Args:
         matches: Available matches with odds
-        budget: Total budget in RMB
+        budget: Total budget in RMB (fully deployed)
         risk_level: "conservative", "moderate", or "aggressive"
-        max_matches: Maximum number of matches to include
+        max_matches: Maximum number of bets
         min_odds: Minimum odds threshold
         max_odds: Maximum odds threshold
-        margin: Bookmaker margin to remove from odds (default 5%)
-        true_probs: Optional dict mapping "match_id:selection" to our estimated true probability
     
     Returns:
-        List of betting recommendations
+        List of betting recommendations totaling ~budget
     """
-    if risk_level not in RISK_FRACTIONS:
-        raise ValueError(f"Invalid risk_level: {risk_level}. Must be one of: {list(RISK_FRACTIONS.keys())}")
-
     if not matches:
         return []
-    
-    fraction = RISK_FRACTIONS.get(risk_level, 0.5)
+
+    # Risk multipliers control concentration
+    # conservative = spread evenly, aggressive = concentrate on top picks
+    concentration = {
+        "conservative": 0.6,   # More even spread
+        "moderate": 1.0,       # Standard weighted
+        "aggressive": 1.5,     # Concentrate on top picks
+    }
+    power = concentration.get(risk_level, 1.0)
+
     candidates = []
-    
+
     for match in matches:
         for selection, odds in match.odds.items():
             if odds < min_odds or odds > max_odds:
                 continue
-            
-            key = f"{match.id}:{selection}"
-            if true_probs and key in true_probs:
-                true_prob = true_probs[key]
-            else:
-                true_prob = estimate_true_probability(odds, margin)
-            
-            kelly_f = kelly_criterion(true_prob, odds)
-            
-            if kelly_f <= 0:
-                continue  # Skip negative EV bets
-            
-            score = ev_score(true_prob, odds)
-            
+
+            implied = implied_probability(odds)
+            # EV score: positive means our estimated edge
+            score = ev_score(implied, odds)
+            if score <= 0:
+                continue  # skip invalid odds
+
             candidates.append({
                 "match": match,
                 "selection": selection,
                 "odds": odds,
-                "true_prob": true_prob,
-                "kelly_fraction": kelly_f,
+                "implied_prob": implied,
                 "score": score,
             })
-    
+
+    if not candidates:
+        return []
+
     # Sort by score (highest = best risk-reward)
     candidates.sort(key=lambda x: x["score"], reverse=True)
-    
+
     # Take top N
-    top_candidates = candidates[:max_matches]
-    
-    # Allocate budget using fractional Kelly
+    top = candidates[:max_matches]
+
+    # Weighted allocation: score^power gives more weight to top picks
+    total_weight = sum(c["score"] ** power for c in top)
+    if total_weight <= 0:
+        return []
+
     recommendations = []
-    remaining_budget = budget
-    
-    for candidate in top_candidates:
-        if remaining_budget <= 0:
-            break
-        
-        # Calculate stake
-        optimal_stake = remaining_budget * candidate["kelly_fraction"] * fraction
-        stake = min(optimal_stake, remaining_budget)
-        
-        if stake < 1.0:  # Minimum bet
+    allocated = 0.0
+
+    for i, candidate in enumerate(top):
+        # Calculate proportional stake
+        weight = candidate["score"] ** power
+        stake = (weight / total_weight) * budget
+
+        # Last bet gets remainder to avoid rounding gaps
+        if i == len(top) - 1:
+            stake = budget - allocated
+
+        stake = round(stake, 2)
+        if stake < 1.0:
             continue
-        
+
         potential_return = stake * candidate["odds"]
-        
+
         recommendations.append(BetRecommendation(
             match_id=candidate["match"].id,
             match_summary=f"{candidate['match'].home_team} vs {candidate['match'].away_team}",
             bet_type=BetType.WIN_DRAW_LOSS,
             selection=candidate["selection"],
             odds=candidate["odds"],
-            stake=round(stake, 2),
+            stake=stake,
             potential_return=round(potential_return, 2),
-            kelly_fraction=round(candidate["kelly_fraction"], 4),
+            kelly_fraction=0,
             ev_score=round(candidate["score"], 4),
-            confidence=round(candidate["true_prob"], 4),
+            confidence=round(candidate["implied_prob"], 4),
         ))
-        
-        remaining_budget -= stake
-    
+
+        allocated += stake
+
     return recommendations

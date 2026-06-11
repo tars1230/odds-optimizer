@@ -9,6 +9,8 @@ interface PlanCardProps {
 export function PlanCard({ recommendations, totalStake, maxReturn }: PlanCardProps) {
   if (recommendations.length === 0) return null;
 
+  const potentialProfit = maxReturn - totalStake;
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold mb-4">最优投注方案</h2>
@@ -24,13 +26,13 @@ export function PlanCard({ recommendations, totalStake, maxReturn }: PlanCardPro
           <div className="text-2xl font-bold text-blue-600">
             ¥{maxReturn.toFixed(0)}
           </div>
-          <div className="text-xs text-gray-500">最高回报</div>
+          <div className="text-xs text-gray-500">全中最高回报</div>
         </div>
-        <div className="bg-purple-50 rounded-lg p-3">
-          <div className="text-2xl font-bold text-purple-600">
-            {totalStake > 0 ? ((maxReturn / totalStake - 1) * 100).toFixed(0) : '0'}%
+        <div className="bg-amber-50 rounded-lg p-3">
+          <div className="text-2xl font-bold text-amber-600">
+            +¥{potentialProfit.toFixed(0)}
           </div>
-          <div className="text-xs text-gray-500">潜在收益率</div>
+          <div className="text-xs text-gray-500">潜在利润</div>
         </div>
       </div>
 

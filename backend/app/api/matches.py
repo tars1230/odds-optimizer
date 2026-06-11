@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 from app.scrapers import AokeScraper
+from app.scrapers.mock import get_mock_matches
 from app.database import cache_matches, get_cached_matches
 
 logger = logging.getLogger(__name__)
@@ -39,8 +40,14 @@ async def get_matches(refresh: bool = False) -> dict:
             "count": len(matches),
         }
     except Exception as e:
-        logger.error(f"Scraper failed: {e}")
-        raise HTTPException(status_code=502, detail=f"Scraper error: {str(e)}")
+        logger.warning(f"Scraper failed, using mock data: {e}")
+        matches = get_mock_matches()
+        await cache_matches(matches)
+        return {
+            "matches": [m.model_dump() for m in matches],
+            "source": "mock",
+            "count": len(matches),
+        }
 
 
 @router.get("/{match_id}")
