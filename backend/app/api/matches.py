@@ -1,8 +1,10 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
 from app.scrapers import AokeScraper
 from app.database import cache_matches, get_cached_matches
-from app.config import settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -37,6 +39,7 @@ async def get_matches(refresh: bool = False) -> dict:
             "count": len(matches),
         }
     except Exception as e:
+        logger.error(f"Scraper failed: {e}")
         raise HTTPException(status_code=502, detail=f"Scraper error: {str(e)}")
 
 

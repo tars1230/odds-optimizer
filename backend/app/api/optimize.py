@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.models import OptimizeRequest, OptimizeResponse
 from app.engine.optimizer import optimize_budget
 from app.database import get_cached_matches
@@ -27,14 +27,17 @@ async def optimize_budget_endpoint(request: OptimizeRequest) -> OptimizeResponse
         matches = [m for m in matches if m.bet_type in request.bet_types]
     
     # Run optimizer
-    recommendations = optimize_budget(
-        matches=matches,
-        budget=request.budget,
-        risk_level=request.risk_level.value,
-        max_matches=request.max_matches,
-        min_odds=request.min_odds,
-        max_odds=request.max_odds,
-    )
+    try:
+        recommendations = optimize_budget(
+            matches=matches,
+            budget=request.budget,
+            risk_level=request.risk_level.value,
+            max_matches=request.max_matches,
+            min_odds=request.min_odds,
+            max_odds=request.max_odds,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Optimization error: {str(e)}")
     
     total_stake = sum(r.stake for r in recommendations)
     max_return = sum(r.potential_return for r in recommendations)
