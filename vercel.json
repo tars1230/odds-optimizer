@@ -2,16 +2,12 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": null,
-  "installCommand": "cd backend && pip install .",
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/index"
-    }
+    { "source": "/api/(.*)", "destination": "/api/index" }
   ],
   "functions": {
-    "api/**/*.py": {
-      "runtime": "python3.11"
+    "api/index.py": {
+      "includeFiles": "backend/**"
     }
   }
 }

@@ -1,9 +1,16 @@
+import os
 from pathlib import Path
 
 
 class Settings:
     PROJECT_ROOT: Path = Path(__file__).parent.parent
-    DB_PATH: Path = PROJECT_ROOT / "data" / "odds.db"
+
+    # On serverless platforms (Vercel/Lambda) only /tmp is writable.
+    _DATA_DIR: Path = (
+        Path("/tmp/odds-data") if os.environ.get("VERCEL") else PROJECT_ROOT / "data"
+    )
+    DB_PATH: Path = _DATA_DIR / "odds.db"
+
     CACHE_TTL_SECONDS: int = 300  # 5 minutes
     SCRAPER_TIMEOUT: int = 30
     MAX_CONCURRENT_REQUESTS: int = 5
