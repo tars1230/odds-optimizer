@@ -3,6 +3,21 @@
   "outputDirectory": "frontend/dist",
   "framework": null,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://odds-backend.up.railway.app/api/$1" }
-  ]
+    {
+      "source": "/api/(.*)",
+      "destination": "https://odds-backend.up.railway.app/api/$1"
+    }
+  ],
+  "experimentalServices": {
+    "frontend": {
+      "root": "frontend",
+      "routePrefix": "/",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "backend",
+      "entrypoint": "app.main:app",
+      "routePrefix": "/_/backend"
+    }
+  }
 }
