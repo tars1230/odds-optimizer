@@ -1,141 +1,71 @@
-"""竞彩官网 scraper — sporttery.cn"""
+"""竞彩官网 scraper — JSON API (no Playwright needed)."""
 
-import re
+import httpx
 from datetime import datetime
-from playwright.async_api import async_playwright
 
 from app.scrapers.base import BaseScraper
 from app.models import Match, BetType
-from app.config import settings
 
 
 class SportteryScraper(BaseScraper):
-    """Scraper for sporttery.cn official lottery odds."""
+    """Scraper using sporttery.cn JSON API — lightweight, no browser required."""
 
-    URL = "https://www.sporttery.cn/jc/jsq/index.html"
+    API_URL = "https://webapi.sporttery.cn/gateway/uniform/football/getMatchCalculatorV1.qry"
+    PARAMS = {"channel": "c"}
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Referer": "https://www.sporttery.cn/",
+    }
 
     async def fetch_matches(self) -> list[Match]:
-        """Fetch football matches from 竞彩官网."""
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
+        """Fetch football matches from 竞彩官网 JSON API."""
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            resp = await client.get(self.API_URL, params=self.PARAMS, headers=self.HEADERS)
+            resp.raise_for_status()
+            data = resp.json()
 
-            try:
-                await page.goto(self.URL, timeout=settings.SCRAPER_TIMEOUT * 1000)
-                await page.wait_for_load_state("domcontentloaded")
-                # Wait for table to render
-                await page.wait_for_selector("table", timeout=10000)
-                return await self._parse_table(page)
-            finally:
-                await browser.close()
-
-    async def _parse_table(self, page) -> list[Match]:
-        """Parse match data from table rows."""
         matches = []
-        rows = await page.query_selector_all("tr")
-
-        for row in rows:
-            text = await row.inner_text()
-            lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
-
-            # Match rows have 11 lines: day, id+league+date, time+teams, handicap info x3, odds x2, footer
-            if len(lines) < 7:
-                continue
-
-            match = self._parse_match(lines)
-            if match:
-                matches.append(match)
+        for day_group in data.get("value", {}).get("matchInfoList", []):
+            for sub in day_group.get("subMatchList", []):
+                match = self._parse_match(sub)
+                if match:
+                    matches.append(match)
 
         return matches
 
-    def _parse_match(self, lines: list[str]) -> Match | None:
-        """Parse a match from its text lines."""
+    def _parse_match(self, m: dict) -> Match | None:
+        """Parse a single match from API response."""
         try:
-            # Line 1: "001\t世界杯\t06-12"
-            id_line = lines[1]
-            id_match = re.match(r"(\d{3})\t(.+?)\t(\d{2}-\d{2})", id_line)
-            if not id_match:
+            # Only include matches that are on sale
+            if m.get("matchStatus") != "Selling":
                 return None
 
-            match_num = id_match.group(1)
-            league = id_match.group(2)
-            date_str = id_match.group(3)
+            # HAD = 胜平负 odds
+            had = m.get("had", {})
+            home_odds = float(had.get("h", 0))
+            draw_odds = float(had.get("d", 0))
+            away_odds = float(had.get("a", 0))
 
-            # Line 2: "03:00\t[A组1]墨西哥VS南非[A组2]"
-            time_line = lines[2]
-            time_match = re.match(r"(\d{2}:\d{2})\t(.+)", time_line)
-            if not time_match:
+            if not all([home_odds, draw_odds, away_odds]):
                 return None
 
-            time_str = time_match.group(1)
-            teams_raw = time_match.group(2)
-
-            # Parse teams: "[A组1]墨西哥VS南非[A组2]" -> "墨西哥", "南非"
-            team_match = re.search(r"(?:\[.*?\])?(.+?)VS(.+?)(?:\[.*?\])?$", teams_raw)
-            if not team_match:
-                return None
-
-            home_team = team_match.group(1).strip()
-            away_team = team_match.group(2).strip()
-
-            # Parse datetime
-            month, day = date_str.split("-")
-            hour, minute = time_str.split(":")
-            match_time = datetime(
-                datetime.now().year, int(month), int(day), int(hour), int(minute)
-            )
-
-            # Find odds line: "1.264.459.00" format
-            odds = None
-            for line in lines[3:]:
-                odds = self._parse_odds_line(line)
-                if odds:
-                    break
-
-            if not odds:
-                return None
+            # Parse time
+            match_date = m.get("matchDate", "")  # "2026-06-13"
+            match_time = m.get("matchTime", "")   # "03:00:00"
+            dt = datetime.strptime(f"{match_date} {match_time[:5]}", "%Y-%m-%d %H:%M")
 
             return Match(
-                id=f"sporttery_{match_num}",
-                league=league,
-                home_team=home_team,
-                away_team=away_team,
-                match_time=match_time,
-                odds=odds,
+                id=f"sporttery_{m.get('matchNum')}",
+                league=m.get("leagueAbbName", ""),
+                home_team=m.get("homeTeamAbbName", ""),
+                away_team=m.get("awayTeamAbbName", ""),
+                match_time=dt,
+                odds={"home": home_odds, "draw": draw_odds, "away": away_odds},
                 bet_type=BetType.WIN_DRAW_LOSS,
                 source="sporttery",
             )
-
         except Exception:
             return None
 
-    def _parse_odds_line(self, line: str) -> dict[str, float] | None:
-        """Parse odds from a line like '1.264.459.00' or '------'."""
-        line = line.strip()
-
-        # Skip invalid lines
-        if "------" in line or "未开售" in line or not line:
-            return None
-
-        # Try concatenated format: "1.264.459.00"
-        match = re.match(r"^(\d+\.\d{2})(\d+\.\d{2})(\d+\.\d{2})$", line)
-        if match:
-            home = float(match.group(1))
-            draw = float(match.group(2))
-            away = float(match.group(3))
-            if self._valid_odds(home, draw, away):
-                return {"home": home, "draw": draw, "away": away}
-
-        return None
-
-    def _valid_odds(self, home: float, draw: float, away: float) -> bool:
-        """Validate odds are reasonable."""
-        return (
-            1.01 <= home <= 100
-            and 1.01 <= draw <= 100
-            and 1.01 <= away <= 100
-        )
-
     async def fetch_match_detail(self, match_id: str) -> Match | None:
-        """Fetch detailed odds for a specific match."""
         return None
