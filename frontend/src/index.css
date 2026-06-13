@@ -57,9 +57,17 @@ body {
   background: var(--bg-card-hover);
 }
 
-/* 大师卡片 */
+/* 大师卡片 - 移除 @apply，直接用 CSS */
 .master-card {
-  @apply glass rounded-2xl p-6 cursor-pointer relative overflow-hidden group;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .master-card::before {
@@ -78,6 +86,7 @@ body {
 .master-card:hover {
   border-color: var(--accent);
   box-shadow: 0 0 24px var(--accent-glow);
+  background: var(--bg-card-hover);
 }
 
 .master-card-content {
