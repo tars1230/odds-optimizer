@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { fetchMasters, getMasterRecommendation, compareMasters, type Master, type MasterRecommendation, type MasterComparison } from './lib/api';
+import { fetchMasters, getMasterRecommendation, compareMasters } from './lib/api';
+import type { Master, MasterRecommendation, MasterComparison } from './lib/api';
 import { useAutoTheme, getThemeIcon } from './lib/theme';
 import { MasterCard } from './components/MasterCard';
 
 function App() {
   const [masters, setMasters] = useState<Master[]>([]);
-  const [selectedMaster, setSelectedMaster] = useState<Master | null>(null);
   const [budget, setBudget] = useState(100);
   const [recommendation, setRecommendation] = useState<MasterRecommendation | null>(null);
   const [comparisons, setComparisons] = useState<MasterComparison[] | null>(null);

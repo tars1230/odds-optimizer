@@ -1,4 +1,4 @@
-import { Master } from '../lib/api';
+import type { Master } from '../lib/api';
 
 interface MasterCardProps {
   master: Master;
