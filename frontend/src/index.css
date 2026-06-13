@@ -1,9 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* 深色主题（默认，18:00-08:00） */
 :root {
   --bg-primary: #0a0a0f;
   --bg-card: rgba(255, 255, 255, 0.03);
+  --bg-card-hover: rgba(255, 255, 255, 0.06);
   --border: rgba(255, 255, 255, 0.06);
   --text-primary: #f0f0f5;
   --text-secondary: #8888a0;
@@ -12,6 +16,21 @@
   --green: #22c55e;
   --amber: #f59e0b;
   --red: #ef4444;
+}
+
+/* 浅色主题（08:00-18:00） */
+:root.light-theme {
+  --bg-primary: #fafafa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f5f5;
+  --border: rgba(0, 0, 0, 0.08);
+  --text-primary: #0a0a0f;
+  --text-secondary: #6b6b7b;
+  --accent: #4f46e5;
+  --accent-glow: rgba(79, 70, 229, 0.1);
+  --green: #16a34a;
+  --amber: #d97706;
+  --red: #dc2626;
 }
 
 * {
@@ -23,79 +42,111 @@ body {
   color: var(--text-primary);
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  background: linear-gradient(90deg, var(--accent) 0%, rgba(99,102,241,0.2) 100%);
-  border-radius: 3px;
-  outline: none;
-}
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: white;
-  cursor: pointer;
-  box-shadow: 0 0 0 4px rgba(99,102,241,0.3), 0 2px 8px rgba(0,0,0,0.3);
-  transition: box-shadow 0.2s;
-}
-input[type="range"]::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 0 6px rgba(99,102,241,0.4), 0 2px 12px rgba(0,0,0,0.4);
-}
-
+/* 玻璃卡片效果 */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
 }
 
-.glass-strong {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.glass:hover {
+  background: var(--bg-card-hover);
 }
 
-.glow-indigo {
-  box-shadow: 0 0 40px rgba(99, 102, 241, 0.1), 0 0 80px rgba(99, 102, 241, 0.05);
+/* 大师卡片 */
+.master-card {
+  @apply glass rounded-2xl p-6 cursor-pointer relative overflow-hidden group;
 }
 
+.master-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, var(--accent-glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.master-card:hover::before {
+  opacity: 1;
+}
+
+.master-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.master-card-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* 风险星级 */
+.risk-stars {
+  color: var(--amber);
+}
+
+/* 动画 */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-up {
-  animation: fade-up 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+  animation: fade-up 0.6s ease-out;
 }
 
 .stagger > * {
   opacity: 0;
-  animation: fade-up 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  animation: fade-up 0.6s ease-out forwards;
 }
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 60ms; }
-.stagger > *:nth-child(3) { animation-delay: 120ms; }
-.stagger > *:nth-child(4) { animation-delay: 180ms; }
-.stagger > *:nth-child(5) { animation-delay: 240ms; }
-.stagger > *:nth-child(6) { animation-delay: 300ms; }
-.stagger > *:nth-child(7) { animation-delay: 360ms; }
-.stagger > *:nth-child(8) { animation-delay: 420ms; }
+.stagger > *:nth-child(2) { animation-delay: 100ms; }
+.stagger > *:nth-child(3) { animation-delay: 200ms; }
+.stagger > *:nth-child(4) { animation-delay: 300ms; }
+.stagger > *:nth-child(5) { animation-delay: 400ms; }
+.stagger > *:nth-child(6) { animation-delay: 500ms; }
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* 主题切换指示器 */
+.theme-indicator {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+  z-index: 50;
+}
+
+.theme-indicator:hover {
+  opacity: 1;
+}

@@ -39,6 +39,10 @@ app.include_router(matches.router, prefix="/api/matches", tags=["matches"])
 app.include_router(optimize.router, prefix="/api/optimize", tags=["optimize"])
 app.include_router(history.router, prefix="/api/history", tags=["history"])
 
+# 投资大师 API
+from app.api import masters
+app.include_router(masters.router, prefix="/api/masters", tags=["masters"])
+
 
 @app.get("/")
 async def root():
